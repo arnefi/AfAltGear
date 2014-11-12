@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Addon Author="arnefi" APIVersion="9" Name="AfAltGear" Description="Did you ever loot stuff and didn&apos;t know whether it was better than the one you have on your bank for your second role? Yeah, that&apos;s bad." Version="0.1">
+    <Script Name="AfAltGear.lua"/>
+    <Form Name="AfAltGear.xml"/>
+</Addon>
