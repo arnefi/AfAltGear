@@ -176,8 +176,6 @@ function AfAltGear:OnUpdateTimer()
 			local doShow = false
 			for idx, iitem in pairs(self.tLootRolls) do
 				theItem = iitem.itemDrop
-				self:log(theItem:GetItemFamilyName())
-				self:log(theItem:GetItemTypeName())
 				if theItem:CanEquip() then
 					doShow = true
 				end
