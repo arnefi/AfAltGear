@@ -182,7 +182,7 @@ function AfAltGear:OnUpdateTimer()
 			end
 			if doShow then
 				if not self.wndMain:IsShown() then
-					self.wndMain:Invoke()
+					self:OnAfAltGearOn()
 				end
 			else
 				if self.wndMain:IsShown() then
