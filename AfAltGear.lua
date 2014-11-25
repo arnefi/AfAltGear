@@ -34,6 +34,20 @@ function AfAltGear:new(o)
     -- initialize variables here
 	o.Sets = {}
 	o.AutoOpen = true
+	o.filter = {
+		[0] = true, 
+		[1] = true, 
+		[2] = true, 
+		[3] = true, 
+		[4] = true, 
+		[5] = true, 
+		[7] = true, 
+		[8] = true, 
+		[10] = true, 
+		[11] = true, 
+		[15] = true, 
+		[16] = true
+	}
     return o
 end
 
@@ -65,7 +79,6 @@ end
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:OnDocLoaded()
-
 	if self.xmlDoc ~= nil and self.xmlDoc:IsLoaded() then
 	    self.wndMain = Apollo.LoadForm(self.xmlDoc, "AfAltGearForm", nil, self)
 		if self.wndMain == nil then
@@ -92,10 +105,6 @@ function AfAltGear:OnDocLoaded()
 	
 		Apollo.CreateTimer("LootUpdateTimer", 1.0, false)
 		Apollo.StopTimer("LootUpdateTimer")
-		
-		--self.timer = ApolloTimer.Create(1.0, true, "OnTimer", self)
-
-		-- Do additional Addon initialization here
 	end
 end
 
@@ -110,7 +119,7 @@ end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: Save and Restore Settings
+-- AfAltGear: Save And Restore Settings
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:OnSave(eType)
@@ -146,7 +155,7 @@ end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: Rolling for Loot
+-- AfAltGear: Rolling for Loot: Save Loot In Object Table, Open Window If Wanted
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:OnLootRollUpdate()
@@ -174,9 +183,9 @@ function AfAltGear:OnUpdateTimer()
 		Apollo.StartTimer("LootUpdateTimer")
 		if self.AutoOpen then
 			local doShow = false
-			for idx, iitem in pairs(self.tLootRolls) do
-				theItem = iitem.itemDrop
-				if theItem:CanEquip() then
+			for idx, RollItem in pairs(self.tLootRolls) do
+				LootItem = RollItem.itemDrop
+				if LootItem:CanEquip() then
 					doShow = true
 				end
 			end
@@ -196,11 +205,12 @@ function AfAltGear:OnUpdateTimer()
 			self.wndMain:Show(false)
 		end
 	end
+	self:RefreshTooltips()
 end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: Build List of Saved Sets
+-- AfAltGear: Build List Of Saved Sets
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:RefreshSetList()
@@ -217,7 +227,7 @@ end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: Show Main Window - invoked by Slash Command and Menu Icon
+-- AfAltGear: Show Main Window - Invoked By Slash Command And Menu Icon
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:OnAfAltGearOn()
@@ -238,21 +248,12 @@ end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: log to system chat
+-- AfAltGear: Log To System Channel
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:log (strMeldung)
 	if strMeldung == nil then strMeldung = "nil" end
 	ChatSystemLib.PostOnChannel(ChatSystemLib.ChatChannel_System, strMeldung, "afAltGear")
-end
-
-
------------------------------------------------------------------------------------------------
--- AfAltGear: Timer - not used right now
------------------------------------------------------------------------------------------------
-
-function AfAltGear:OnTimer()
-	-- Do your timer-related stuff here.
 end
 
 
@@ -272,7 +273,7 @@ end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: Save Current Gear as new Set
+-- AfAltGear: Save Current Gear As New Set
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:OnSaveSet(wndHandler, wndControl, eMouseButton)
@@ -293,7 +294,39 @@ end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: Overwrite Current Set with current Gear
+-- AfAltGear: Generate Hover Tooltips Based On Group Loot
+-----------------------------------------------------------------------------------------------
+
+function AfAltGear:RefreshTooltips()
+	if not self.currentSet then return end
+	
+	if self.Sets[self.currentSet] then
+		local equip = self.Sets[self.currentSet]["equip"]
+		
+		for slot, itemID in pairs(equip) do 
+			if self.filter[slot] then 
+				local feld = self.wndMain:FindChild("item"..slot.."d")
+				local itemInfo = Item.GetDataFromId(itemID)
+				local CompareItem = self:FindMatchingItem(itemInfo)
+				local feld = self.wndMain:FindChild("item"..slot.."d")
+				
+				if feld then
+					feld:SetSprite(itemInfo:GetIcon())
+					if CompareItem then
+						wndTooltip = Tooltip.GetItemTooltipForm(self, feld, CompareItem, {bNotEquipped = true, bPrimary = true, bSelling = false, itemCompare = itemInfo})
+					else
+						wndTooltip = Tooltip.GetItemTooltipForm(self, feld, itemInfo, {bPrimary = true, bSelling = false, itemCompare = false, bNotEquipped = false})
+					end
+				end
+			end
+		end			
+		
+	end
+end
+
+
+-----------------------------------------------------------------------------------------------
+-- AfAltGear: Overwrite Current Set With Current Gear
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:OnOverwriteSet( wndHandler, wndControl, eMouseButton )
@@ -325,7 +358,7 @@ end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: Build Permanent Tooltip for Selected Item
+-- AfAltGear: Build Permanent Tooltip For Selected Item
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:OnItemClicked(wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation)
@@ -336,29 +369,52 @@ function AfAltGear:OnItemClicked(wndHandler, wndControl, eMouseButton, nLastRela
 	if self.Sets[self.currentSet]["equip"][id] == nil then return end
 	local item = Item.GetDataFromId(self.Sets[self.currentSet]["equip"][id])
 	
-	local wndChatItemToolTip = Apollo.LoadForm(self.xmlDoc, "ToolTipWindow", nil, self)
+	if eMouseButton == GameLib.CodeEnumInputMouse.Right then
+		-- bring up context menu (link, preview,...)
+		Event_FireGenericEvent("ItemLink", item)
+	else
+		-- generate permanent tooltip
+		local wndChatItemToolTip = Apollo.LoadForm(self.xmlDoc, "ToolTipWindow", nil, self)
+		wndChatItemToolTip:SetData(item)
+		
+		local wndLink = Tooltip.GetItemTooltipForm(self, wndControl:GetParent(), item, {bPermanent = true, wndParent = wndChatItemToolTip, bSelling = false, itemCompare = false})
+		local nLeftWnd, nTopWnd, nRightWnd, nBottomWnd = wndChatItemToolTip:GetAnchorOffsets()
+		local nLeft, nTop, nRight, nBottom = wndLink:GetAnchorOffsets()
 	
-	wndChatItemToolTip:SetData(item)
-	
-	local itemEquipped = false
-
-	local wndLink = Tooltip.GetItemTooltipForm(self, wndControl:GetParent(), item, {bPermanent = true, wndParent = wndChatItemToolTip, bSelling = false, bNotEquipped = true})
-
-	local nLeftWnd, nTopWnd, nRightWnd, nBottomWnd = wndChatItemToolTip:GetAnchorOffsets()
-	local nLeft, nTop, nRight, nBottom = wndLink:GetAnchorOffsets()
-
-	wndChatItemToolTip:SetAnchorOffsets(nLeftWnd, nTopWnd, nLeftWnd + nRight + 15, nBottom + 75)
-	--self.wndMain:Show(false)
+		wndChatItemToolTip:SetAnchorOffsets(nLeftWnd, nTopWnd, nLeftWnd + nRight + 15, nBottom + 75)
+	end
 end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: Delete All Icons and Tooltips
+-- AfAltGear: Returns First Item From Currently Open Group Loot Of The Same Type (Hand, Light,
+--            Equippable) Or False Otherwise
+-----------------------------------------------------------------------------------------------
+
+function AfAltGear:FindMatchingItem(item)
+	if not self.tLootRolls then return false end
+	
+	local iType = item:GetItemType()
+
+	for idx, RollItem in pairs(self.tLootRolls) do
+		LootItem = RollItem.itemDrop
+		if LootItem:CanEquip() then
+			if (LootItem:GetItemType() == iType) then
+				return LootItem
+			end
+		end
+	end	
+	
+	return false
+end
+
+
+-----------------------------------------------------------------------------------------------
+-- AfAltGear: Delete All Icons And Tooltips
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:ReSet()
-	local filter = {[0] = true, [1] = true, [2] = true, [3] = true, [4] = true, [5] = true, [7] = true, [8] = true, [10] = true, [11] = true, [15] = true, [16] = true}
-	for idx,_ in pairs(filter) do
+	for idx,_ in pairs(self.filter) do
 		local feld = self.wndMain:FindChild("item"..idx.."d")
 		feld:SetSprite()
 		feld:SetTooltip("")
@@ -368,7 +424,7 @@ end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: Load Set
+-- AfAltGear: Selected Set To Load
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:OnSetClicked( wndHandler, wndControl, eMouseButton )
@@ -378,14 +434,13 @@ end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: Load set
+-- AfAltGear: Load Set
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:LoadSet(idx)
 	self.currentSet = idx
-	local filter = {[0] = true, [1] = true, [2] = true, [3] = true, [4] = true, [5] = true, [7] = true, [8] = true, [10] = true, [11] = true, [15] = true, [16] = true}
 	
-	for idx,_ in pairs(filter) do
+	for idx,_ in pairs(self.filter) do
 		local feld = self.wndMain:FindChild("item"..idx.."d")
 		feld:SetSprite()
 		feld:SetTooltip("")
@@ -397,7 +452,7 @@ function AfAltGear:LoadSet(idx)
 		local equip = self.Sets[idx]["equip"]
 		
 		for slot, itemID in pairs(equip) do 
-			if filter[slot] then 
+			if self.filter[slot] then 
 				local feld = self.wndMain:FindChild("item"..slot.."d")
 				local itemInfo = Item.GetDataFromId(itemID)
 				if feld then
