@@ -99,18 +99,16 @@ function AfAltGear:OnDocLoaded()
 		Apollo.RegisterEventHandler("InterfaceMenuListHasLoaded", "OnInterfaceMenuListHasLoaded", self)
 		Apollo.RegisterEventHandler("AfAltGear_Show", "OnAfAltGearOn", self)
 		
-		
 		Apollo.RegisterEventHandler("LootRollUpdate",		"OnLootRollUpdate", self)
-	    Apollo.RegisterTimerHandler("LootUpdateTimer", 		"OnUpdateTimer", self)
 	
-		Apollo.CreateTimer("LootUpdateTimer", 1.0, false)
-		Apollo.StopTimer("LootUpdateTimer")
+		self.LootTimer = ApolloTimer.Create(1.0, true, "OnUpdateTimer", self)
+		self.LootTimer:Stop()
 	end
 end
 
 
 -----------------------------------------------------------------------------------------------
--- AfAltGear: Insert Menu Ion
+-- AfAltGear: Insert Menu Icon
 -----------------------------------------------------------------------------------------------
 
 function AfAltGear:OnInterfaceMenuListHasLoaded()
@@ -160,9 +158,8 @@ end
 
 function AfAltGear:OnLootRollUpdate()
 	if not self.bTimerRunning then
-		Apollo.StartTimer("LootUpdateTimer")
 		self.bTimerRunning = true
-		
+		self.LootTimer:Start()
 	end
 end
 
@@ -180,7 +177,6 @@ function AfAltGear:OnUpdateTimer()
 	self:UpdateKnownLoot()
 	
 	if self.tLootRolls and #self.tLootRolls > 0 then
-		Apollo.StartTimer("LootUpdateTimer")
 		if self.AutoOpen then
 			local doShow = false
 			for idx, RollItem in pairs(self.tLootRolls) do
@@ -200,6 +196,7 @@ function AfAltGear:OnUpdateTimer()
 			end
 		end
 	else
+		self.LootTimer:Stop()
 		self.bTimerRunning = false
 		if self.AutoOpen then
 			self.wndMain:Show(false)
