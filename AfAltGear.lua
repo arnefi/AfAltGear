@@ -21,6 +21,17 @@ local AfAltGear = {}
 
 local strVersion = "@project-version@"
 
+local tQ2B = {
+	[Item.CodeEnumItemQuality.Inferior]  = "BK3:UI_BK3_ItemQualityGrey",
+	[Item.CodeEnumItemQuality.Average]   = "BK3:UI_BK3_ItemQualityWhite",
+	[Item.CodeEnumItemQuality.Good]      = "BK3:UI_BK3_ItemQualityGreen",
+	[Item.CodeEnumItemQuality.Excellent] = "BK3:UI_BK3_ItemQualityBlue",
+	[Item.CodeEnumItemQuality.Superb]    = "BK3:UI_BK3_ItemQualityPurple",
+	[Item.CodeEnumItemQuality.Legendary] = "BK3:UI_BK3_ItemQualityOrange",
+	[Item.CodeEnumItemQuality.Artifact]  = "BK3:UI_BK3_ItemQualityMagenta"
+}
+
+local aagMarkerSprite = "CRB_BaseBarSprites:sprHUD_QuestItemRunner"
  
 -----------------------------------------------------------------------------------------------
 -- Initialization
@@ -48,6 +59,7 @@ function AfAltGear:new(o)
 		[15] = true, 
 		[16] = true
 	}
+	
     return o
 end
 
@@ -305,14 +317,16 @@ function AfAltGear:RefreshTooltips()
 				local feld = self.wndMain:FindChild("item"..slot.."d")
 				local itemInfo = Item.GetDataFromId(itemID)
 				local CompareItem = self:FindMatchingItem(itemInfo)
-				local feld = self.wndMain:FindChild("item"..slot.."d")
+				local highlight = self.wndMain:FindChild("item"..slot.."h")
 				
 				if feld then
 					feld:SetSprite(itemInfo:GetIcon())
 					if CompareItem then
 						wndTooltip = Tooltip.GetItemTooltipForm(self, feld, CompareItem, {bNotEquipped = true, bPrimary = true, bSelling = false, itemCompare = itemInfo})
+						highlight:SetSprite(aagMarkerSprite)
 					else
 						wndTooltip = Tooltip.GetItemTooltipForm(self, feld, itemInfo, {bPrimary = true, bSelling = false, itemCompare = false, bNotEquipped = false})
+						highlight:SetSprite("")
 					end
 				end
 			end
@@ -452,6 +466,10 @@ function AfAltGear:LoadSet(idx)
 			if self.filter[slot] then 
 				local feld = self.wndMain:FindChild("item"..slot.."d")
 				local itemInfo = Item.GetDataFromId(itemID)
+				local quality = self.wndMain:FindChild("item"..slot.."q")
+				local iQ = itemInfo:GetItemQuality()
+				quality:SetSprite()
+				quality:SetSprite(tQ2B[iQ])
 				if feld then
 					feld:SetSprite(itemInfo:GetIcon())
 					wndTooltip = Tooltip.GetItemTooltipForm(self, feld, itemInfo, {bPrimary = true, bSelling = false, itemCompare = itemEquipped})
