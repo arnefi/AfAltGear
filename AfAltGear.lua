@@ -60,6 +60,7 @@ function AfAltGear:new(o)
 		[16] = true
 	}
 	
+	o.UserClosed = false
     return o
 end
 
@@ -199,7 +200,9 @@ function AfAltGear:OnUpdateTimer()
 			end
 			if doShow then
 				if not self.wndMain:IsShown() then
-					self:OnAfAltGearOn()
+					if not self.UserClosed then
+						self:OnAfAltGearOn()
+					end
 				end
 			else
 				if self.wndMain:IsShown() then
@@ -210,6 +213,7 @@ function AfAltGear:OnUpdateTimer()
 	else
 		self.LootTimer:Stop()
 		self.bTimerRunning = false
+		self.UserClosed = false
 		if self.AutoOpen then
 			self.wndMain:Show(false)
 		end
@@ -277,6 +281,9 @@ end
 
 function AfAltGear:OnOK()
 	self.location = self.wndMain:GetLocation()
+	if self.tLootRolls then
+		self.UserClosed = true
+	end
 	self.wndMain:Close()
 end
 
